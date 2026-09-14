@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Macify — Interactive Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  html, body { height: 100%; overflow: hidden; font-family: "Inter", "Segoe UI", system-ui, sans-serif; }
+  body {
+    background: #111 url("../assets/wallpapers/sonoma-dark.jpg") center/cover no-repeat;
+    color: #fff;
+  }
+  .fallback-bg { position: fixed; inset: 0; z-index: -1;
+    background: radial-gradient(1200px 600px at 20% 10%, #7b2ff7, transparent),
+                radial-gradient(1000px 600px at 80% 30%, #f72f8f, transparent),
+                radial-gradient(900px 700px at 50% 90%, #2f6ff7, transparent), #0b0b12; }
+  /* ---------- menu bar ---------- */
+  #bar { position: fixed; top: 0; left: 0; right: 0; height: 30px; display: flex; align-items: center;
+    padding: 0 10px; font-size: 13px; background: rgba(0,0,0,.45); backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px); z-index: 50; }
+  #bar .left, #bar .right { display: flex; align-items: center; gap: 2px; }
+  #bar .right { margin-left: auto; }
+  .bitem { padding: 3px 10px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+  .bitem:hover { background: rgba(255,255,255,.18); }
+  .bitem.bold { font-weight: 700; }
+  .menu { position: fixed; top: 32px; min-width: 230px; background: rgba(30,30,32,.92); backdrop-filter: blur(25px);
+    border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 5px; font-size: 13px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5); display: none; z-index: 100; }
+  .menu.open { display: block; }
+  .menu div { padding: 5px 12px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 30px; }
+  .menu div:hover { background: #0a84ff; }
+  .menu div span.k { opacity: .55; font-size: 12px; }
+  .menu hr { border: none; border-top: 1px solid rgba(255,255,255,.15); margin: 5px 8px; }
+  /* ---------- dock ---------- */
+  #dockWrap { position: fixed; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; z-index: 50; }
+  #dock { display: flex; align-items: flex-end; gap: 6px; padding: 8px 12px 6px;
+    background: rgba(20,20,22,.55); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,.18);
+    border-radius: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.45); }
+  .ditem { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+  .dicon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 30px; transition: width .08s, height .08s, font-size .08s; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; margin-top: 3px; opacity: 0; }
+  .dot.on { opacity: 1; }
+  .sep { width: 1px; align-self: stretch; background: rgba(255,255,255,.35); margin: 6px 4px; }
+  #tip { position: fixed; padding: 4px 12px; background: rgba(40,40,42,.9); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 8px; font-size: 13px; display: none; z-index: 60; pointer-events: none; transform: translate(-50%, -100%); }
+  /* ---------- spotlight ---------- */
+  #spot { position: fixed; left: 50%; top: 20%; transform: translateX(-50%); width: min(680px, 92vw);
+    background: rgba(22,22,24,.88); backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,.16);
+    border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,.6); display: none; z-index: 90; overflow: hidden; }
+  #spot.open { display: block; }
+  #spot .q { display: flex; align-items: center; gap: 12px; padding: 14px 18px; }
+  #spot .q span { font-size: 20px; }
+  #spot input { flex: 1; background: none; border: none; outline: none; color: #fff; font-size: 22px; }
+  #spot ul { list-style: none; max-height: 340px; overflow: auto; padding: 6px 8px 10px; border-top: 1px solid rgba(255,255,255,.12); }
+  #spot li { padding: 8px 12px; border-radius: 8px; font-size: 15px; cursor: pointer; display: flex; gap: 12px; align-items: center; }
+  #spot li.sel, #spot li:hover { background: #0a84ff; }
+  #spot li .k { margin-left: auto; font-size: 12px; opacity: .6; }
+  /* ---------- launchpad ---------- */
+  #lp { position: fixed; inset: 0; background: rgba(10,10,14,.72); backdrop-filter: blur(30px); display: none;
+    z-index: 80; flex-direction: column; align-items: center; padding: 50px 20px; overflow: auto; }
+  #lp.open { display: flex; }
+  #lp input { width: min(320px, 80vw); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,.25);
+    background: rgba(255,255,255,.12); color: #fff; font-size: 14px; outline: none; text-align: center; margin-bottom: 30px; }
+  #lpGrid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 900px; }
+  .lpapp { width: 104px; padding: 10px 4px; text-align: center; cursor: pointer; border-radius: 10px; }
+  .lpapp:hover { background: rgba(255,255,255,.12); }
+  .lpapp .i { font-size: 42px; line-height: 1.2; }
+  .lpapp .n { font-size: 12px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* ---------- control center ---------- */
+  #cc { position: fixed; top: 38px; right: 10px; width: 340px; background: rgba(22,22,24,.88);
+    backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,.16); border-radius: 16px;
+    padding: 14px; display: none; z-index: 90; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+  #cc.open { display: block; }
+  #cc h3 { font-size: 16px; margin-bottom: 10px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .card { background: rgba(255,255,255,.08); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+  .card b { display: block; margin-bottom: 2px; }
+  .card small { opacity: .6; }
+  .card button, .row button { margin-top: 6px; width: 100%; padding: 5px; border-radius: 7px; border: 1px solid rgba(255,255,255,.2);
+    background: rgba(255,255,255,.1); color: #fff; cursor: pointer; font-size: 12px; }
+  .card button:hover, .row button:hover { background: rgba(255,255,255,.22); }
+  .row { background: rgba(255,255,255,.08); border-radius: 12px; padding: 10px 12px; font-size: 13px; margin-bottom: 8px; }
+  .row label { display: flex; justify-content: space-between; margin: 6px 0 2px; }
+  .row input[type=range] { width: 100%; accent-color: #0a84ff; }
+  .prow { display: flex; gap: 6px; }
+  .prow button { flex: 1; margin-top: 0; }
+  /* ---------- calendar ---------- */
+  #cal { position: fixed; top: 38px; right: 10px; background: rgba(28,28,30,.94); backdrop-filter: blur(25px);
+    border: 1px solid rgba(255,255,255,.16); border-radius: 12px; padding: 12px 16px; display: none; z-index: 90; }
+  #cal.open { display: block; }
+  #cal table { border-collapse: collapse; font-size: 13px; text-align: center; }
+  #cal td, #cal th { width: 30px; height: 28px; }
+  #cal td.today { background: #0a84ff; border-radius: 50%; font-weight: 700; }
+  #hint { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6);
+    padding: 8px 18px; border-radius: 20px; font-size: 13px; z-index: 40; backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.15); text-align: center; line-height: 1.7; }
+  #hint b { color: #0a84ff; }
+  a { color: #5ac8fa; }
+</style>
+</head>
+<body>
+<div class="fallback-bg"></div>
+
+<div id="bar">
+  <div class="left">
+    <div class="bitem bold" data-menu="mApple" style="font-size:15px">⌘</div>
+    <div class="bitem bold" id="appName">Finder</div>
+    <div class="bitem" data-menu="mFile">File</div>
+    <div class="bitem" data-menu="mEdit">Edit</div>
+    <div class="bitem" data-menu="mView">View</div>
+    <div class="bitem" data-menu="mWin">Window</div>
+    <div class="bitem" data-menu="mHelp">Help</div>
+  </div>
+  <div class="right">
+    <div class="bitem" id="batt">100%</div>
+    <div class="bitem">📶</div>
+    <div class="bitem" id="spotBtn">🔍</div>
+    <div class="bitem" id="ccBtn">🎛</div>
+    <div class="bitem" id="clock">--</div>
+  </div>
+</div>
+
+<div class="menu" id="mApple">
+  <div>About This Mac</div><hr>
+  <div>System Settings...</div><div>App Store...</div><hr>
+  <div>Sleep</div><div>Restart...</div><div>Shut Down...</div>
+</div>
+<div class="menu" id="mFile">
+  <div>New Window <span class="k">Ctrl+N</span></div>
+  <div>Open... <span class="k">Ctrl+O</span></div><hr>
+  <div>Save <span class="k">Ctrl+S</span></div>
+  <div>Close Window <span class="k">Ctrl+W</span></div>
+</div>
+<div class="menu" id="mEdit">
+  <div>Undo <span class="k">Ctrl+Z</span></div><hr>
+  <div>Cut <span class="k">Ctrl+X</span></div><div>Copy <span class="k">Ctrl+C</span></div>
+  <div>Paste <span class="k">Ctrl+V</span></div>
+</div>
+<div class="menu" id="mView">
+  <div>Refresh <span class="k">F5</span></div><div>Full Screen <span class="k">F11</span></div>
+</div>
+<div class="menu" id="mWin">
+  <div>Minimize <span class="k">Win+↓</span></div><div>Next Window <span class="k">Ctrl+Tab</span></div>
+</div>
+<div class="menu" id="mHelp"><div>Macify Help <span class="k">F1</span></div></div>
+
+<div id="hint">
+  <b>Macify interactive preview</b> — hover the Dock, press <b>/</b> for Spotlight, click 🔍 🎛 and the clock.<br>
+  This mockup runs in your browser · the real thing is PowerShell — <a href="../README.md">see README</a>
+</div>
+
+<div id="dockWrap"><div id="dock"></div></div>
+<div id="tip"></div>
+
+<div id="spot">
+  <div class="q"><span>🔍</span><input id="spotInput" placeholder="Spotlight Search" autocomplete="off"></div>
+  <ul id="spotList"></ul>
+</div>
+
+<div id="lp"><input id="lpInput" placeholder="Search" autocomplete="off"><div id="lpGrid"></div></div>
+
+<div id="cc">
+  <h3>Control Center</h3>
+  <div class="cards">
+    <div class="card"><b>📶 Wi-Fi</b><small>Home-5G</small><button>Wi-Fi Settings</button></div>
+    <div class="card"><b>🔵 Bluetooth</b><small>On</small><button>Bluetooth Settings</button></div>
+    <div class="card"><b>📡 Nearby Share</b><small>Everyone nearby</small><button>Share Settings</button></div>
+    <div class="card"><b>🌙 Focus</b><small>Off</small><button id="focusBtn">Turn On</button></div>
+  </div>
+  <div class="row">
+    <label>☀️ Display <span id="bv">80%</span></label>
+    <input type="range" id="bright" value="80">
+    <label>🔊 Sound <span id="vv">50%</span></label>
+    <input type="range" id="vol" value="50">
+  </div>
+  <div class="row prow">
+    <button>Lock</button><button>Sleep</button><button>Restart</button><button>Shut Down</button>
+  </div>
+</div>
+
+<div id="cal"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const apps = [
+  ["Finder", "📁", 1], ["Safari", "🧭", 1], ["Mail", "✉️", 0], ["Photos", "🌄", 0],
+  ["Terminal", "⬛", 1], ["Settings", "⚙️", 0], ["App Store", "🛍", 0], ["Music", "🎵", 0],
+  ["Messages", "💬", 0], ["Calendar", "📅", 0], ["Notes", "📝", 0], ["Maps", "🗺", 0]
+];
+// clock
+function tick() {
+  const d = new Date(), days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+    mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  $("#clock").textContent = `${days[d.getDay()]} ${d.getDate()} ${mon[d.getMonth()]}  ` +
+    String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+tick(); setInterval(tick, 1000);
+// menus
+document.querySelectorAll("[data-menu]").forEach(el => {
+  el.addEventListener("click", e => {
+    e.stopPropagation();
+    const m = document.getElementById(el.dataset.menu);
+    const was = m.classList.contains("open");
+    document.querySelectorAll(".menu.open").forEach(x => x.classList.remove("open"));
+    if (!was) { const r = el.getBoundingClientRect(); m.style.left = r.left + "px"; m.classList.add("open"); }
+  });
+});
+document.addEventListener("click", () => document.querySelectorAll(".menu.open").forEach(x => x.classList.remove("open")));
+// dock
+const dock = $("#dock"), tip = $("#tip");
+const grad = ["linear-gradient(135deg,#5ac8fa,#0a84ff)","linear-gradient(135deg,#ff9f0a,#ff375f)",
+  "linear-gradient(135deg,#30d158,#0a84ff)","linear-gradient(135deg,#bf5af2,#5e5ce6)",
+  "linear-gradient(135deg,#48484a,#1c1c1e)","linear-gradient(135deg,#98989f,#48484a)",
+  "linear-gradient(135deg,#0a84ff,#5e5ce6)"];
+function dockItem(name, glyph, running, bg, cb) {
+  const d = document.createElement("div");
+  d.className = "ditem";
+  d.innerHTML = `<div class="dicon" style="background:${bg}">${glyph}</div><div class="dot${running ? " on" : ""}"></div>`;
+  d.addEventListener("mouseenter", () => {
+    const r = d.getBoundingClientRect();
+    tip.textContent = name + (running ? "  •" : "");
+    tip.style.left = (r.left + r.width / 2) + "px";
+    tip.style.top = (r.top - 8) + "px";
+    tip.style.display = "block";
+  });
+  d.addEventListener("mouseleave", () => tip.style.display = "none");
+  d.addEventListener("click", cb);
+  dock.appendChild(d);
+  return d;
+}
+apps.slice(0, 7).forEach((a, i) => dockItem(a[0], a[1], a[2], grad[i % grad.length],
+  () => { $("#appName").textContent = a[0]; }));
+const s = document.createElement("div"); s.className = "sep"; dock.appendChild(s);
+dockItem("Launchpad", "🚀", 0, "linear-gradient(135deg,#3a3a3c,#0c0c0e)", openLP);
+dockItem("Trash", "🗑", 0, "linear-gradient(135deg,#e5e5ea,#aeaeb2)", () => flash("Trash is empty"));
+// magnification
+const BASE = 48, MAX = 74;
+dock.addEventListener("mousemove", e => {
+  dock.querySelectorAll(".ditem").forEach(d => {
+    const r = d.querySelector(".dicon").getBoundingClientRect();
+    const dist = Math.abs((r.left + r.width / 2) - e.clientX);
+    const size = BASE + (MAX - BASE) * Math.exp(-((dist / 110) ** 2));
+    const ic = d.querySelector(".dicon");
+    ic.style.width = ic.style.height = size + "px";
+    ic.style.fontSize = (size * 0.62) + "px";
+  });
+});
+dock.addEventListener("mouseleave", () => dock.querySelectorAll(".dicon").forEach(ic => {
+  ic.style.width = ic.style.height = BASE + "px"; ic.style.fontSize = "30px";
+}));
+function flash(msg) {
+  tip.textContent = msg; tip.style.display = "block";
+  const d = dock.lastChild.getBoundingClientRect();
+  tip.style.left = (d.left + d.width / 2) + "px"; tip.style.top = (d.top - 8) + "px";
+  setTimeout(() => tip.style.display = "none", 1500);
+}
+// spotlight
+const spotApps = [...apps.map(a => ({ n: a[0], k: "Application", g: a[1] })),
+  { n: "Sleep", k: "Action", g: "💤" }, { n: "Shut Down", k: "Action", g: "⏻" },
+  { n: "Empty Trash", k: "Action", g: "🗑" }, { n: "Turn Dark Mode On", k: "Action", g: "🌙" },
+  { n: "Quarterly-Report.docx", k: "Document", g: "📄" }, { n: "wallpaper.png", k: "Image", g: "🖼" }];
+function score(n, q) {
+  n = n.toLowerCase(); q = q.toLowerCase();
+  if (!q) return -1;
+  if (n === q) return 9999;
+  if (n.startsWith(q)) return 5000 - n.length;
+  const ix = n.indexOf(q);
+  if (ix >= 0) return 3000 - ix * 10;
+  let qi = 0, sc = 0;
+  for (const c of n) { if (c === q[qi]) { sc += 10; qi++; } if (qi === q.length) return sc; }
+  return qi === q.length ? sc : -1;
+}
+function renderSpot() {
+  const q = $("#spotInput").value.trim(), ul = $("#spotList");
+  ul.innerHTML = "";
+  if (!q) { ul.style.display = "none"; return; }
+  ul.style.display = "block";
+  let items = [];
+  if (/^[0-9+\-*/().\s%^]+$/.test(q) && /\d/.test(q) && /[+\-*/%^]/.test(q)) {
+    try { const v = Function('"use strict";return(' + q.replace(/\^/g, "**") + ")")();
+      if (typeof v === "number" && isFinite(v)) items.push({ n: `${q} = ${v}`, k: "Calculator", g: "🧮", s: 99999 }); } catch (e) {}
+  }
+  spotApps.forEach(a => { const s = score(a.n, q); if (s >= 0) items.push({ ...a, s }); });
+  items.sort((a, b) => b.s - a.s);
+  items = items.slice(0, 9);
+  if (!items.length) items = [{ n: `Search the web for '${q}'`, k: "Web", g: "🌐" }];
+  items.forEach((it, i) => {
+    const li = document.createElement("li");
+    if (i === 0) li.classList.add("sel");
+    li.innerHTML = `${it.g} ${it.n}<span class="k">${it.k}</span>`;
+    li.addEventListener("click", closeSpot);
+    ul.appendChild(li);
+  });
+}
+function openSpot() { $("#spot").classList.add("open"); $("#spotInput").value = ""; renderSpot();
+  setTimeout(() => $("#spotInput").focus(), 30); }
+function closeSpot() { $("#spot").classList.remove("open"); }
+$("#spotBtn").addEventListener("click", e => { e.stopPropagation();
+  $("#spot").classList.contains("open") ? closeSpot() : openSpot(); });
+$("#spotInput").addEventListener("input", renderSpot);
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && !$("#spot").classList.contains("open") && document.activeElement.tagName !== "INPUT") {
+    e.preventDefault(); openSpot();
+  }
+  if (e.key === "Escape") { closeSpot(); $("#lp").classList.remove("open"); $("#cc").classList.remove("open"); $("#cal").classList.remove("open"); }
+  if (e.key === "Enter" && $("#spot").classList.contains("open")) closeSpot();
+});
+// launchpad
+function openLP() { $("#lp").classList.add("open"); $("#lpInput").value = ""; renderLP(""); }
+function renderLP(q) {
+  const g = $("#lpGrid"); g.innerHTML = "";
+  apps.filter(a => a[0].toLowerCase().includes(q.toLowerCase())).forEach(a => {
+    const d = document.createElement("div");
+    d.className = "lpapp";
+    d.innerHTML = `<div class="i">${a[1]}</div><div class="n">${a[0]}</div>`;
+    d.addEventListener("click", () => { $("#appName").textContent = a[0]; $("#lp").classList.remove("open"); });
+    g.appendChild(d);
+  });
+}
+$("#lpInput").addEventListener("input", e => renderLP(e.target.value));
+// control center
+$("#ccBtn").addEventListener("click", e => { e.stopPropagation(); $("#cal").classList.remove("open");
+  $("#cc").classList.toggle("open"); });
+$("#focusBtn").addEventListener("click", e => { e.target.textContent = e.target.textContent === "Turn On" ? "Turn Off" : "Turn On"; });
+$("#bright").addEventListener("input", e => $("#bv").textContent = e.target.value + "%");
+$("#vol").addEventListener("input", e => $("#vv").textContent = e.target.value + "%");
+// calendar
+$("#clock").parentElement.id = "clockWrap";
+$("#clock").addEventListener("click", e => { e.stopPropagation(); $("#cc").classList.remove("open");
+  const c = $("#cal"); c.classList.toggle("open");
+  if (c.classList.contains("open")) {
+    const d = new Date(), y = d.getFullYear(), m = d.getMonth();
+    const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
+    const mon = ["January","February","March","April","May","June","July","August","September","October","November","December"][m];
+    let h = `<b>${mon} ${y}</b><table><tr><th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th></tr><tr>`;
+    for (let i = 0; i < first; i++) h += "<td></td>";
+    for (let day = 1; day <= days; day++) {
+      h += `<td class="${day === d.getDate() ? "today" : ""}">${day}</td>`;
+      if ((first + day) % 7 === 0) h += "</tr><tr>";
+    }
+    c.innerHTML = h + "</tr></table>";
+  }
+});
+</script>
+</body>
+</html>

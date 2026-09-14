@@ -1,0 +1,15 @@
+# Macify user data (created on install - never commit)
+logs/
+*.log
+config.user.json
+dock.user.json
+backup-*.json
+
+# Python
+__pycache__/
+*.pyc
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store

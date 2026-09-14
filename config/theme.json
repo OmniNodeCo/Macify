@@ -1,0 +1,25 @@
+{
+  "_comment": "Macify default theme. Copy what you want to change into %APPDATA%/Macify/config.json - user values win.",
+  "theme": "auto",
+  "accent": "#0A84FF",
+  "bar": {
+    "height": 30,
+    "clockFormat": "ddd d MMM   HH:mm",
+    "showBattery": true,
+    "showWifi": true,
+    "blur": true
+  },
+  "dock": {
+    "iconSize": 48,
+    "magnify": true,
+    "maxSize": 72,
+    "autohide": false,
+    "marginBottom": 10
+  },
+  "spotlight": {
+    "hotkeys": ["Alt+Space", "Ctrl+Space"],
+    "width": 680,
+    "maxResults": 9
+  },
+  "wallpaper": "assets/wallpapers/sonoma-dark.jpg"
+}

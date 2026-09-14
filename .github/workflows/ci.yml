@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  validate:
+    name: Structural validation (Linux, no PowerShell needed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run validator
+        run: python3 tests/validate.py
+
+  pester:
+    name: Parse + Pester tests (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify every script parses on PowerShell 5.1
+        shell: powershell
+        run: |
+          $failed = $false
+          Get-ChildItem -Path . -Filter '*.ps1' -Recurse | Where-Object { $_.FullName -notmatch '\.git' } | ForEach-Object {
+            $tokens = $null; $errs = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errs) | Out-Null
+            if ($errs.Count -gt 0) { $failed = $true; Write-Host "::error::$($_.Name): $($errs[0].Message)" }
+            else { Write-Host "OK: $($_.Name)" }
+          }
+          if ($failed) { exit 1 }
+      - name: Run Pester tests
+        shell: powershell
+        run: |
+          if (Get-Module -ListAvailable -Name Pester | Where-Object Version -ge '5.0.0') {
+            Invoke-Pester -Path .\tests -Output Detailed
+          } else {
+            Install-Module Pester -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+            Invoke-Pester -Path .\tests -Output Detailed
+          }

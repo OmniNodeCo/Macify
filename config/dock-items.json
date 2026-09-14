@@ -1,0 +1,12 @@
+[
+  { "name": "Finder",    "target": "%SystemRoot%\\explorer.exe", "args": "shell:MyComputerFolder" },
+  { "name": "Safari",    "target": "auto:browser" },
+  { "name": "Mail",      "target": "https://outlook.live.com/" },
+  { "name": "Photos",    "target": "%SystemRoot%\\explorer.exe", "args": "shell:MyPicturesFolder" },
+  { "name": "Terminal",  "target": "auto:terminal" },
+  { "name": "Settings",  "target": "ms-settings:" },
+  { "name": "App Store", "target": "ms-windows-store:" },
+  { "name": "-separator-" },
+  { "name": "Launchpad", "target": "macify:launchpad" },
+  { "name": "Trash",     "target": "macify:trash" }
+]
