@@ -82,12 +82,12 @@ function Get-MacifyDockItems {
   $file = Join-Path $p.Config 'dock-items.json'
   if (Test-Path $p.UserDock) { $file = $p.UserDock }
   try {
-    $items = ConvertFrom-MacifyJsonArray -Json (Get-Content $file -Raw -Encoding UTF8)
+    $items = @(ConvertFrom-MacifyJsonArray -Json (Get-Content $file -Raw -Encoding UTF8))
     if ($items.Count -eq 0) { throw 'dock items file is empty' }
     return $items
   } catch {
     Write-MacifyLog "Dock items invalid, using defaults: $($_.Exception.Message)" 'WARN'
-    return ConvertFrom-MacifyJsonArray -Json (Get-Content (Join-Path $p.Config 'dock-items.json') -Raw -Encoding UTF8)
+    return @(ConvertFrom-MacifyJsonArray -Json (Get-Content (Join-Path $p.Config 'dock-items.json') -Raw -Encoding UTF8))
   }
 }
 

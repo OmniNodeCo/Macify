@@ -77,7 +77,7 @@ Describe 'MacifyLib' {
     $a = ConvertFrom-MacifyJsonArray -Json '[{"n":1},{"n":2},{"n":3}]'
     $a.Count | Should -Be 3
     $a[2].n | Should -Be 3
-    $b = ConvertFrom-MacifyJsonArray -Json '{"n":1}'
+    $b = @(ConvertFrom-MacifyJsonArray -Json '{"n":1}')
     $b.Count | Should -Be 1
   }
   It 'Merge-MacifyObject overlays user settings' {
