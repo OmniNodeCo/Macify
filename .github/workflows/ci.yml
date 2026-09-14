@@ -37,9 +37,20 @@ jobs:
       - name: Run Pester tests
         shell: powershell
         run: |
-          if (Get-Module -ListAvailable -Name Pester | Where-Object Version -ge '5.0.0') {
-            Invoke-Pester -Path .\tests -Output Detailed
-          } else {
+          if (-not (Get-Module -ListAvailable -Name Pester | Where-Object Version -ge '5.0.0')) {
             Install-Module Pester -Force -SkipPublisherCheck -MinimumVersion 5.0.0
-            Invoke-Pester -Path .\tests -Output Detailed
           }
+          $r = Invoke-Pester -Path .\tests -Output Detailed -PassThru
+          foreach ($t in @($r.Tests | Where-Object { $_.Result -eq 'Failed' })) {
+            $detail = ''
+            foreach ($er in @($t.ErrorRecord)) {
+              if ($er -is [System.Management.Automation.ErrorRecord]) {
+                $detail += $er.Exception.Message + ' <-- ' + $er.ScriptStackTrace + ' | '
+              } else { $detail += [string]$er + ' | ' }
+            }
+            if ([string]::IsNullOrWhiteSpace($detail)) { $detail = 'failed (no details captured)' }
+            $esc = $detail -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+            $name = ([string]$t.ExpandedPath) -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+            Write-Host ("::error title=Pester failed: {0}::{1}" -f $name, $esc)
+          }
+          if ($r.FailedCount -gt 0) { exit 1 }
