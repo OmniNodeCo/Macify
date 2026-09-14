@@ -222,6 +222,7 @@ def main():
         "Setup.bat", "config/theme.json", "config/dock-items.json",
         "assets/wallpapers/sonoma-dark.jpg", "assets/macify.ico",
         "assets/sounds/chime.wav", "assets/sounds/pop.wav", "assets/sounds/glass.wav",
+        "tools/Build-Release.ps1", ".github/workflows/release.yml",
     ]
     for f in must_exist:
         if not os.path.exists(os.path.join(ROOT, f)):

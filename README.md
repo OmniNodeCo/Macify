@@ -35,7 +35,7 @@ No system-file patching · No admin needed · Fully reversible · 100% open sour
 
 **Requirements:** Windows 10 (1809+) or 11. That's it — no admin, no Store apps, no downloads.
 
-1. Download this repo (green **Code** button > **Download ZIP**, then unzip) — or:
+1. Download the [latest release ZIP](https://github.com/OmniNodeCo/Macify/releases) and unzip it — or clone the repo:
    ```powershell
    git clone https://github.com/OmniNodeCo/Macify.git
    cd Macify
@@ -133,7 +133,8 @@ Macify/
 │   └── MacifyControlCenter.ps1
 ├── tools/
 │   ├── MacifyTweaks.ps1      # registry tweaks with backup/restore
-│   └── Install-Extras.ps1    # winget apps, cursors, font (optional)
+│   ├── Install-Extras.ps1    # winget apps, cursors, font (optional)
+│   └── Build-Release.ps1     # packages the release ZIP (used by release.yml)
 ├── config/                   # default theme + dock items
 ├── assets/                   # wallpapers, sounds (generated), icons
 ├── docs/                     # FAQ, keyboard shortcuts
@@ -146,6 +147,11 @@ Macify/
 Bug reports with Windows version + `%APPDATA%\Macify\logs\macify.log` excerpts are
 gold. PRs welcome — please keep scripts **PowerShell 5.1-compatible** (CI enforces it)
 and side-effect-free on import.
+
+To build a distributable ZIP locally: `powershell -ExecutionPolicy Bypass -File tools\Build-Release.ps1`
+(output lands in `dist/`). To cut a release: `git tag v1.0.0; git push origin v1.0.0` —
+[.github/workflows/release.yml](.github/workflows/release.yml) runs the tests, builds the
+ZIP, and publishes it on the [Releases page](https://github.com/OmniNodeCo/Macify/releases).
 
 ## ❤️ Credits & license
 

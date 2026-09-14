@@ -31,16 +31,21 @@ Describe 'Config files' {
     $cfg.spotlight.width | Should -BeGreaterThan 0
   }
   It 'dock-items.json is a non-empty array with launch targets' {
-    $items = @(Get-Content (Join-Path $script:RepoRoot 'config\dock-items.json') -Raw | ConvertFrom-Json)
+    $json = Get-Content (Join-Path $script:RepoRoot 'config\dock-items.json') -Raw -Encoding UTF8
+    $items = @(ConvertFrom-MacifyJsonArray -Json $json)
     $items.Count | Should -BeGreaterThan 3
     @($items | Where-Object { $_.name -eq 'Trash' }).Count | Should -Be 1
     @($items | Where-Object { $_.name -eq 'Launchpad' }).Count | Should -Be 1
+    foreach ($it in $items) {
+      if ($it.name -eq '-separator-') { continue }
+      $it.target | Should -Not -BeNullOrEmpty -Because ("{0} needs a launch target" -f $it.name)
+    }
   }
 }
 
 Describe 'MacifyLib' {
   It 'exposes expected helper functions' {
-    foreach ($fn in @('Get-MacifyPaths', 'Get-MacifyConfig', 'Invoke-SafeMath', 'Merge-MacifyObject',
+    foreach ($fn in @('Get-MacifyPaths', 'Get-MacifyConfig', 'Invoke-SafeMath', 'Merge-MacifyObject', 'ConvertFrom-MacifyJsonArray',
         'Test-MacifySingleInstance', 'Get-StartMenuApps', 'Resolve-MacifyTarget')) {
       (Get-Command $fn -ErrorAction SilentlyContinue) | Should -Not -BeNullOrEmpty -Because "$fn must exist"
     }
@@ -68,6 +73,13 @@ Describe 'MacifyLib' {
     (Invoke-SafeMath '') | Should -BeNullOrEmpty
     (Invoke-SafeMath '2+') | Should -BeNullOrEmpty
   }
+  It 'ConvertFrom-MacifyJsonArray normalizes top-level arrays' {
+    $a = ConvertFrom-MacifyJsonArray -Json '[{"n":1},{"n":2},{"n":3}]'
+    $a.Count | Should -Be 3
+    $a[2].n | Should -Be 3
+    $b = ConvertFrom-MacifyJsonArray -Json '{"n":1}'
+    $b.Count | Should -Be 1
+  }
   It 'Merge-MacifyObject overlays user settings' {
     $base = '{"a":1,"bar":{"x":1,"y":2}}' | ConvertFrom-Json
     $over = '{"bar":{"y":9}}' | ConvertFrom-Json
@@ -87,6 +99,17 @@ Describe 'Installer wiring' {
   It 'scripts referenced by Install.ps1 exist' {
     foreach ($rel in @('src\MacifyBar.ps1', 'src\MacifyDock.ps1', 'src\MacifySpotlight.ps1',
         'tools\MacifyTweaks.ps1', 'tools\Install-Extras.ps1')) {
+      (Test-Path (Join-Path $script:RepoRoot $rel)) | Should -BeTrue -Because "$rel must exist"
+    }
+  }
+  It 'release manifest lists files that exist' {
+    $list = @(& (Join-Path $script:RepoRoot 'tools\Build-Release.ps1') -ListOnly)
+    $list.Count | Should -BeGreaterThan 10
+    $list | Should -Contain 'Setup.bat'
+    @($list | Where-Object { $_ -match 'MacifyDock\.ps1$' }).Count | Should -Be 1
+    @($list | Where-Object { $_ -match '^(tests|preview|\.github)[\\/]' }).Count | Should -Be 0
+    $list | Should -Not -Contain 'tools\Build-Release.ps1'
+    foreach ($rel in $list) {
       (Test-Path (Join-Path $script:RepoRoot $rel)) | Should -BeTrue -Because "$rel must exist"
     }
   }

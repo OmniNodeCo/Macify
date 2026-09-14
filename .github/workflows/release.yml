@@ -1,0 +1,58 @@
+name: Release
+
+# Cut a release by pushing a tag:  git tag v1.0.0 && git push origin v1.0.0
+# Or re-release an existing tag from the Actions tab (workflow_dispatch).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)release, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Test, build and publish
+    runs-on: windows-latest
+    steps:
+      - name: Check out tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Run Pester tests
+        shell: powershell
+        run: |
+          if (-not (Get-Module -ListAvailable -Name Pester | Where-Object Version -ge '5.0.0')) {
+            Install-Module Pester -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+          }
+          $r = Invoke-Pester -Path .\tests -Output Detailed -PassThru
+          if ($r.FailedCount -gt 0) { exit 1 }
+
+      - name: Build release ZIP
+        shell: powershell
+        run: |
+          $tag = '${{ github.event.inputs.tag }}'
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = '${{ github.ref_name }}' }
+          .\tools\Build-Release.ps1 -Version $tag
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macify-${{ github.event.inputs.tag || github.ref_name }}
+          path: dist/Macify-*.zip
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = '${{ github.event.inputs.tag }}'
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = '${{ github.ref_name }}' }
+          gh release create $tag dist/Macify-*.zip dist/checksums.txt --title "Macify $tag" --generate-notes

@@ -58,15 +58,36 @@ function Get-MacifyConfig {
   return $cfg
 }
 
+function ConvertFrom-MacifyJsonArray {
+  # Parse a JSON document whose top level is an array. Works around a Windows
+  # PowerShell 5.1 quirk where a top-level array can arrive as ONE nested /
+  # PSObject-wrapped object instead of N pipeline items. Always returns Object[].
+  param([Parameter(Mandatory = $true)][string]$Json)
+  $parsed = ConvertFrom-Json -InputObject $Json
+  if ($parsed -is [System.Management.Automation.PSObject] -and
+      $parsed.psobject.BaseObject -is [System.Collections.IList]) {
+    $parsed = $parsed.psobject.BaseObject
+  }
+  if ($parsed -is [System.Collections.IList]) {
+    $out = @()
+    foreach ($el in $parsed) { $out += $el }
+    return $out
+  }
+  if ($null -eq $parsed) { return @() }
+  return @($parsed)
+}
+
 function Get-MacifyDockItems {
   $p = Get-MacifyPaths
   $file = Join-Path $p.Config 'dock-items.json'
   if (Test-Path $p.UserDock) { $file = $p.UserDock }
   try {
-    return @(Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json)
+    $items = ConvertFrom-MacifyJsonArray -Json (Get-Content $file -Raw -Encoding UTF8)
+    if ($items.Count -eq 0) { throw 'dock items file is empty' }
+    return $items
   } catch {
     Write-MacifyLog "Dock items invalid, using defaults: $($_.Exception.Message)" 'WARN'
-    return @(Get-Content (Join-Path $p.Config 'dock-items.json') -Raw -Encoding UTF8 | ConvertFrom-Json)
+    return ConvertFrom-MacifyJsonArray -Json (Get-Content (Join-Path $p.Config 'dock-items.json') -Raw -Encoding UTF8)
   }
 }
 
