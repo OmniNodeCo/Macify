@@ -85,6 +85,23 @@ support is on the roadmap.
 Updates can't break Macify's approach (no patched files). At worst, a major update
 resets a taskbar setting — just re-run `Install.ps1`.
 
+## Can Macify use MyDockFinder instead of the built-in dock?
+
+Yes — MyDockFinder is supported as an alternative **engine**. Pick it during
+install or run `tools\Install-MyDockFinder.ps1` later. It uses ONLY official
+sources (Steam / mydockfinder.com), verifies the binary signature, and you can
+switch back to native anytime with `tools\Set-MacifyEngine.ps1 -Engine native`.
+Full details: [docs/ENGINES.md](ENGINES.md).
+
+## Is MyDockFinder safe?
+
+It's closed-source with mixed public reviews: most users love it, but there are
+reports of antivirus false-positives — and, more importantly, unofficial
+"cracked / free activated" repacks are a known malware vector. Macify's rules:
+official sources only (Steam or mydockfinder.com), never repacks, signature
+check before first run. If that still feels iffy, the native engine is 100%
+open-source and the default for a reason.
+
 ## I found a bug / have an idea
 
 Open an issue with your Windows version (`winver`), the component (bar/dock/Spotlight),

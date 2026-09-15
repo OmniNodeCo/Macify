@@ -223,6 +223,10 @@ def main():
         "assets/wallpapers/sonoma-dark.jpg", "assets/macify.ico",
         "assets/sounds/chime.wav", "assets/sounds/pop.wav", "assets/sounds/glass.wav",
         "tools/Build-Release.ps1", ".github/workflows/release.yml",
+        "config/engines.json", "tools/Set-MacifyEngine.ps1",
+        "tools/Install-MyDockFinder.ps1", "tools/Install-RainmeterWidgets.ps1",
+        "extras/rainmeter/Macify/Clock/Clock.ini", "extras/rainmeter/Macify/Stats/Stats.ini",
+        "docs/ENGINES.md",
     ]
     for f in must_exist:
         if not os.path.exists(os.path.join(ROOT, f)):

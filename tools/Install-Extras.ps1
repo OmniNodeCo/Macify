@@ -142,9 +142,16 @@ function Install-InterFont {
 }
 
 Write-Host ''
+function Install-RainmeterWidgetPart {
+  Write-Host ''
+  Write-Host '--- Rainmeter desktop widgets (macOS clock + stats) ---' -ForegroundColor Cyan
+  & (Join-Path $PSScriptRoot 'Install-RainmeterWidgets.ps1') -Silent:$Silent
+}
+
 Write-Host '==================== Macify Extras ====================' -ForegroundColor Magenta
 Install-WingetApps
 Install-MacCursors
 Install-InterFont
+Install-RainmeterWidgetPart
 Write-Host ''
 Write-Host 'Extras done.' -ForegroundColor Green

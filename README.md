@@ -66,6 +66,26 @@ Optional extras (offered during Full install, or run `tools\Install-Extras.ps1`)
 PowerToys, TranslucentTB, Windows Terminal, Flow Launcher, open-source
 [macOS cursors](https://github.com/ful1e5/apple_cursor) and the Inter font (an OFL lookalike of San Francisco).
 
+## 🔌 Engines: native or MyDockFinder
+
+Macify's dock + menu bar can be powered by two **engines** (switch anytime, no reinstall):
+
+| Engine | What it is | Best for |
+|---|---|---|
+| **Native** (default) | Built-in PowerShell bar + dock. Open-source, zero downloads, no admin | Everyone; maximum safety + reversibility |
+| **MyDockFinder** | Popular third-party dock + menu bar ([official site](https://www.mydockfinder.com), [Steam](https://store.steampowered.com/app/1787090/MyDockFinder/)). Closed-source; you install it from official sources, Macify integrates it | Pixel-faithful macOS look, window previews, weather icons |
+
+Pick during install, or switch later:
+
+```powershell
+# use MyDockFinder (guided setup: finds your official install, safety-checks it)
+powershell -ExecutionPolicy Bypass -File tools\Install-MyDockFinder.ps1
+# back to native anytime
+powershell -ExecutionPolicy Bypass -File tools\Set-MacifyEngine.ps1 -Engine native
+```
+
+Details, safety notes and add-ons (Rainmeter widgets): [docs/ENGINES.md](docs/ENGINES.md).
+
 ## ⌨️ Everyday use
 
 - **`Alt+Space`** (or `Ctrl+Space`) — Spotlight from anywhere
@@ -134,10 +154,14 @@ Macify/
 ├── tools/
 │   ├── MacifyTweaks.ps1      # registry tweaks with backup/restore
 │   ├── Install-Extras.ps1    # winget apps, cursors, font (optional)
+│   ├── Set-MacifyEngine.ps1       # switch native <-> MyDockFinder engine
+│   ├── Install-MyDockFinder.ps1   # guided third-party engine setup
+│   ├── Install-RainmeterWidgets.ps1  # desktop widgets add-on
 │   └── Build-Release.ps1     # packages the release ZIP (used by release.yml)
-├── config/                   # default theme + dock items
+├── config/                   # theme + dock items + engine registry
 ├── assets/                   # wallpapers, sounds (generated), icons
-├── docs/                     # FAQ, keyboard shortcuts
+├── extras/                   # Rainmeter widget skins (optional add-on)
+├── docs/                     # FAQ, shortcuts, engines guide
 ├── tests/ + .github/         # Pester tests, validator, CI
 └── preview/                  # interactive browser mockup
 ```

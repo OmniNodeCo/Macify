@@ -1,0 +1,22 @@
+{
+  "_comment": "Macify engine registry. Engines provide the dock and/or menu bar. Native is built in; others are third-party integrations (see docs/ENGINES.md).",
+  "default": "native",
+  "engines": [
+    {
+      "id": "native",
+      "name": "Macify Native",
+      "provides": ["bar", "dock", "spotlight", "control-center"],
+      "openSource": true,
+      "description": "Built-in PowerShell + WPF bar, dock, Spotlight and Control Center. No downloads, no admin."
+    },
+    {
+      "id": "mydockfinder",
+      "name": "MyDockFinder",
+      "provides": ["bar", "dock", "launchpad"],
+      "openSource": false,
+      "homepage": "https://www.mydockfinder.com",
+      "steam": "https://store.steampowered.com/app/1787090/MyDockFinder/",
+      "description": "Popular third-party macOS dock + menu bar for Windows (closed-source, official builds via Steam/mydockfinder.com). Macify detects your install, manages auto-start, and keeps native Spotlight as a complement."
+    }
+  ]
+}

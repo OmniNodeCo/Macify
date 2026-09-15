@@ -22,7 +22,7 @@ function Get-ReleaseManifest {
   return @(
     'Setup.bat', 'Install.ps1', 'Uninstall.ps1', 'Start-Macify.ps1', 'Stop-Macify.ps1',
     'README.md', 'LICENSE',
-    'src', 'config', 'assets', 'tools', 'docs'
+    'src', 'config', 'assets', 'tools', 'docs', 'extras'
   )
 }
 

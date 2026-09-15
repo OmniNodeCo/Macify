@@ -20,13 +20,16 @@ Stop-MacifyComponent -Match 'MacifyBar.ps1'
 Stop-MacifyComponent -Match 'MacifyDock.ps1'
 Stop-MacifyComponent -Match 'MacifySpotlight.ps1'
 Stop-MacifyComponent -Match 'MacifyControlCenter.ps1'
+foreach ($pr in @(Get-Process -Name 'MyDockFinder*' -ErrorAction SilentlyContinue)) {
+  try { Stop-Process -Id $pr.Id -Force -ErrorAction SilentlyContinue } catch { }
+}
 Start-Sleep -Milliseconds 800
 Write-Host '  [ok] Stopped' -ForegroundColor Green
 
 # 2. Remove auto-start shortcuts
 Write-Host 'Removing auto-start shortcuts...' -ForegroundColor Cyan
 $startup = [Environment]::GetFolderPath('Startup')
-foreach ($n in @('Macify Bar.lnk', 'Macify Dock.lnk', 'Macify Spotlight.lnk')) {
+foreach ($n in @('Macify Bar.lnk', 'Macify Dock.lnk', 'Macify Spotlight.lnk', 'Macify MyDockFinder.lnk')) {
   Remove-Item (Join-Path $startup $n) -Force -ErrorAction SilentlyContinue
 }
 Write-Host '  [ok] Startup clean' -ForegroundColor Green
@@ -39,6 +42,18 @@ if ($tweaks -ne '') {
   & $tweaks -Restore
 } else {
   Write-Host 'Tweaks script not found - skipping registry restore.' -ForegroundColor Yellow
+}
+
+# 3b. Rainmeter widgets (optional add-on)
+$rmSkins = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Rainmeter\Skins\Macify'
+if (Test-Path $rmSkins) {
+  $rmLocal2 = Join-Path $env:LOCALAPPDATA 'Macify\tools\Install-RainmeterWidgets.ps1'
+  $rmRepo2 = Join-Path $here 'tools\Install-RainmeterWidgets.ps1'
+  $rmTool = if (Test-Path $rmLocal2) { $rmLocal2 } elseif (Test-Path $rmRepo2) { $rmRepo2 } else { '' }
+  $rmDel = $true
+  if (-not $Silent) { $rmDel = (Read-Host 'Remove Macify Rainmeter widgets too? [Y/n]') -notmatch '^(n|no)$' }
+  if ($rmDel -and $rmTool -ne '') { & $rmTool -Remove }
+  elseif ($rmDel) { Remove-Item $rmSkins -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
 # 4. Restore wallpaper for minimal installs
@@ -79,4 +94,4 @@ if ($Full) {
 
 Write-Host ''
 Write-Host 'Macify uninstalled. Your Windows settings were restored.' -ForegroundColor Green
-Write-Host 'Note: cursors/fonts/Store apps from Extras are left in place (remove via Settings if wanted).' -ForegroundColor Gray
+Write-Host 'Note: Extras (cursors/fonts/Store apps/Rainmeter) and MyDockFinder are your own software and stay installed.' -ForegroundColor Gray

@@ -43,6 +43,30 @@ Describe 'Config files' {
   }
 }
 
+Describe 'Engines' {
+  It 'engines.json registry is valid' {
+    $reg = Get-Content (Join-Path $script:RepoRoot 'config\engines.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $reg.default | Should -Not -BeNullOrEmpty
+    $ids = @($reg.engines | ForEach-Object { $_.id })
+    $ids | Should -Contain $reg.default
+    $ids | Should -Contain 'native'
+    ($ids | Sort-Object -Unique).Count | Should -Be $ids.Count
+    foreach ($e in $reg.engines) {
+      $e.name | Should -Not -BeNullOrEmpty
+      @($e.provides).Count | Should -BeGreaterThan 0
+    }
+  }
+  It 'Rainmeter skins are present and well-formed' {
+    foreach ($rel in @('extras\rainmeter\Macify\Clock\Clock.ini', 'extras\rainmeter\Macify\Stats\Stats.ini')) {
+      $full = Join-Path $script:RepoRoot $rel
+      (Test-Path $full) | Should -BeTrue -Because "$rel must exist"
+      $txt = Get-Content $full -Raw
+      $txt | Should -Match '\[Rainmeter\]'
+      $txt | Should -Match 'Meter=String'
+    }
+  }
+}
+
 Describe 'MacifyLib' {
   It 'exposes expected helper functions' {
     foreach ($fn in @('Get-MacifyPaths', 'Get-MacifyConfig', 'Invoke-SafeMath', 'Merge-MacifyObject', 'ConvertFrom-MacifyJsonArray',

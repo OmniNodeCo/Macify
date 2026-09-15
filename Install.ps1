@@ -4,12 +4,15 @@
 #     powershell -ExecutionPolicy Bypass -File .\Install.ps1
 #
 # Flags: -Silent (defaults, no prompts)  -Minimal (bar+dock only)  -NoTweaks  -NoStartup
+#        -Engine native|mydockfinder  (-AcceptThirdParty required for silent third-party setup)
 
 param(
   [switch]$Silent,
   [switch]$Minimal,
   [switch]$NoTweaks,
   [switch]$NoStartup,
+  [ValidateSet('native', 'mydockfinder')][string]$Engine = 'native',
+  [switch]$AcceptThirdParty,
   [string]$InstallPath = ''
 )
 
@@ -38,7 +41,7 @@ function Copy-MacifyFiles {
     return $Dest
   }
   Write-Host ("Installing Macify files to {0} ..." -f $Dest) -ForegroundColor Cyan
-  foreach ($d in @('src', 'config', 'assets', 'tools')) {
+  foreach ($d in @('src', 'config', 'assets', 'tools', 'extras')) {
     $from = Join-Path $repoRoot $d
     $to = Join-Path $Dest $d
     if (Test-Path $from) {
@@ -109,6 +112,19 @@ if (-not $Silent -and -not $Minimal -and -not $NoTweaks) {
   }
 }
 
+if (($mode -eq 'full' -or $mode -eq 'minimal') -and -not $Silent -and $Engine -eq 'native') {
+  Write-Host ''
+  Write-Host 'Choose your dock + menu bar engine:' -ForegroundColor Cyan
+  Write-Host '  [1] Native (default) - built-in Macify bar + dock, open-source, no downloads'
+  Write-Host '  [2] MyDockFinder - popular third-party dock + menu bar (closed-source, uses your own install from Steam)'
+  $epick = Read-Host 'Pick [1-2]'
+  if ($epick -eq '2') { $Engine = 'mydockfinder' }
+}
+if ($Engine -eq 'mydockfinder' -and $Silent -and -not $AcceptThirdParty) {
+  Write-Host '-Engine mydockfinder with -Silent requires -AcceptThirdParty. Aborting.' -ForegroundColor Red
+  exit 1
+}
+
 if ($InstallPath -eq '') { $InstallPath = Join-Path $env:LOCALAPPDATA 'Macify' }
 if ($mode -ne 'extrasonly') { $InstallPath = Copy-MacifyFiles -Dest $InstallPath }
 
@@ -147,8 +163,19 @@ if ($mode -eq 'full' -or $mode -eq 'tweaksonly') {
   } catch { Write-Host ("  [!!] Wallpaper: {0}" -f $_.Exception.Message) -ForegroundColor Yellow }
 }
 
-# ---- Auto-start shortcuts ----
-if (($mode -eq 'full' -or $mode -eq 'minimal') -and -not $NoStartup) {
+# ---- Engine setup (native vs MyDockFinder) ----
+$engineExternal = ($Engine -eq 'mydockfinder' -and ($mode -eq 'full' -or $mode -eq 'minimal'))
+if ($engineExternal) {
+  & (Join-Path $InstallPath 'tools\Install-MyDockFinder.ps1') -Silent:$Silent -AcceptThirdParty:$AcceptThirdParty -NoStartup:$NoStartup
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host 'MyDockFinder setup did not complete - falling back to the native engine.' -ForegroundColor Yellow
+    $Engine = 'native'
+    $engineExternal = $false
+  }
+}
+
+# ---- Auto-start shortcuts (native engine; external engines manage their own) ----
+if (($mode -eq 'full' -or $mode -eq 'minimal') -and -not $NoStartup -and -not $engineExternal) {
   Write-Host ''
   Write-Host 'Creating auto-start shortcuts...' -ForegroundColor Cyan
   New-MacifyShortcut -Name 'Bar' -Script (Join-Path $InstallPath 'src\MacifyBar.ps1') -Icon $iconFile
@@ -156,8 +183,8 @@ if (($mode -eq 'full' -or $mode -eq 'minimal') -and -not $NoStartup) {
   New-MacifyShortcut -Name 'Spotlight' -Script (Join-Path $InstallPath 'src\MacifySpotlight.ps1') -ExtraArgs '-Hidden' -Icon $iconFile
 }
 
-# ---- Launch ----
-if ($mode -eq 'full' -or $mode -eq 'minimal') {
+# ---- Launch (external engines were already started by their own setup) ----
+if (($mode -eq 'full' -or $mode -eq 'minimal') -and -not $engineExternal) {
   Write-Host ''
   Write-Host 'Starting Macify...' -ForegroundColor Cyan
   Start-AllComponents -Root $InstallPath
@@ -176,6 +203,7 @@ Write-Host '   Alt+Space (or Ctrl+Space) ... Spotlight search'
 Write-Host '   Click the magnifier / sliders (top-right) ... Spotlight / Control Center'
 Write-Host '   Right-click the Dock ... magnification + auto-hide options'
 Write-Host '   Right-click any Launchpad app ... Add to Dock'
+Write-Host '   Switch engines: tools\Set-MacifyEngine.ps1 -Engine native|mydockfinder'
 Write-Host ''
 Write-Host '   Uninstall any time:  right-click Setup folder > Uninstall.ps1,'
 Write-Host '   or run:  powershell -ExecutionPolicy Bypass -File Uninstall.ps1'
